@@ -61,6 +61,7 @@ function App() {
   const [approvals, setApprovals] = useState([])
   const [walletType, setWalletType] = useState(null) // 'metamask' or 'walletconnect'
   const [walletConnectProvider, setWalletConnectProvider] = useState(null)
+  const [qrCodeUri, setQrCodeUri] = useState(null) // QRコードURI
   
   // コントラクトアドレス（ローカルストレージ対応）
   const [testUSDTAddress, setTestUSDTAddress] = useState(getInitialTestUSDTAddress)
@@ -86,16 +87,7 @@ function App() {
           projectId: WALLETCONNECT_PROJECT_ID,
           chains: [56], // BSC Mainnetをデフォルトチェーンに
           optionalChains: [1, 11155111, 97], // その他のチェーンはオプション
-          showQrModal: true,
-          qrModalOptions: {
-            themeMode: 'light',
-            themeVariables: {
-              '--w3m-z-index': '9999'
-            },
-            enableExplorer: false, // APIエラーを回避するためオフライン動作に
-            enableAccountView: true,
-            enableNetworkView: true,
-          },
+          showQrModal: false, // モーダルを無効化してAPIエラーを回避
           metadata: {
             name: 'Later Pay',
             description: '後払い決済システム',
@@ -123,6 +115,7 @@ function App() {
           setSigner(null)
           setAccount(null)
           setWalletType(null)
+          setQrCodeUri(null)
           setStatus({ type: 'info', message: 'ウォレットが切断されました' })
         })
       } catch (error) {
@@ -207,9 +200,15 @@ function App() {
       }
 
       setStatus({ type: 'info', message: 'ウォレットを選択してください...' })
+      setQrCodeUri(null) // QRコードをリセット
       
       // 接続オプションを指定（スマホ対応）
       try {
+        // URIイベントをリッスンしてQRコードを取得
+        walletConnectProvider.on('display_uri', (uri) => {
+          setQrCodeUri(uri)
+        })
+
         await walletConnectProvider.connect({
           optionalChains: [1, 11155111, 56, 97],
         })
@@ -219,6 +218,7 @@ function App() {
           console.error('WalletConnect接続エラー:', error)
           setStatus({ type: 'error', message: `接続エラー: ${error.message}` })
         }
+        setQrCodeUri(null)
         return
       }
 
@@ -230,6 +230,7 @@ function App() {
       setSigner(signer)
       setAccount(address)
       setWalletType('walletconnect')
+      setQrCodeUri(null) // 接続成功時にQRコードを非表示
 
       // コントラクトアドレスが設定されている場合のみ、コントラクトインスタンスを作成
       if (testUSDTAddress && laterPayAddress) {
@@ -392,6 +393,33 @@ function App() {
               </button>
             )}
           </div>
+          {qrCodeUri && (
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              <p style={{ marginBottom: '10px' }}>QRコードをスキャンして接続してください</p>
+              <div style={{ 
+                display: 'inline-block', 
+                padding: '20px', 
+                backgroundColor: 'white', 
+                borderRadius: '8px',
+                border: '2px solid #e0e0e0'
+              }}>
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeUri)}`}
+                  alt="WalletConnect QR Code"
+                  style={{ maxWidth: '300px', width: '100%' }}
+                />
+              </div>
+              <p style={{ marginTop: '10px', fontSize: '0.9em', color: '#666' }}>
+                または、スマホのウォレットアプリでこのQRコードをスキャンしてください
+              </p>
+              <button 
+                onClick={() => setQrCodeUri(null)} 
+                style={{ marginTop: '10px', padding: '8px 16px', cursor: 'pointer' }}
+              >
+                閉じる
+              </button>
+            </div>
+          )}
           {!WALLETCONNECT_PROJECT_ID && (
             <p style={{ marginTop: '10px', fontSize: '0.9em', color: '#666' }}>
               WalletConnectを使用するには、環境変数 VITE_WALLETCONNECT_PROJECT_ID を設定してください
