@@ -20,6 +20,9 @@ module.exports = {
       url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
+      timeout: 120000,
+      gas: 6000000,
+      gasPrice: 10000000000, // 10 gwei
     },
     bsc: {
       url: process.env.BSC_RPC_URL || "https://bsc-dataseed1.binance.org/",

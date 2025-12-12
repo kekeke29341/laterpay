@@ -211,10 +211,32 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "emergencyWithdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "approvalId",
+        "type": "uint256"
+      }
+    ],
+    "name": "canExecutePayment",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "canExecute",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

@@ -20,7 +20,8 @@
     "approve": "node scripts/approvePayment.js",
     "execute": "node scripts/executePayment.js",
     "list": "node scripts/listApprovals.js",
-    "generate-wallet": "node scripts/generateWallet.js"
+    "generate-wallet": "node scripts/generateWallet.js",
+    "test:deferred": "node scripts/testDeferredPayment.js sepolia"
   },
   "keywords": ["blockchain", "defi", "payment"],
   "author": "",

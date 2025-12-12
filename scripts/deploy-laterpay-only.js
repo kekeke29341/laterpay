@@ -4,7 +4,7 @@ const path = require("path");
 
 async function main() {
   const network = hre.network.name;
-  console.log("Deploying to network:", network);
+  console.log("Deploying LaterPayV2 only to network:", network);
   
   let deployer;
   if (network === "sepolia" || network === "bsc" || network === "bscTestnet") {
@@ -25,36 +25,26 @@ async function main() {
     [deployer] = await hre.ethers.getSigners();
   }
   
-  console.log("Deploying contracts with account:", deployer.address);
+  console.log("Deploying with account:", deployer.address);
   const balance = await hre.ethers.provider.getBalance(deployer.address);
   console.log("Account balance:", hre.ethers.formatEther(balance), "ETH");
   
-  if (network === "sepolia" && balance === 0n) {
-    console.error("\n❌ Error: Insufficient balance for deployment!");
-    console.error("Please send Sepolia ETH to:", deployer.address);
-    console.error("Get Sepolia ETH from: https://sepoliafaucet.com/");
-    process.exit(1);
-  }
-
-  // Deploy TestUSDT
-  console.log("\nDeploying TestUSDT...");
-  const TestUSDT = await hre.ethers.getContractFactory("TestUSDT");
-  const testUSDT = await TestUSDT.deploy(deployer.address);
-  await testUSDT.waitForDeployment();
-  const testUSDTAddress = await testUSDT.getAddress();
-  console.log("TestUSDT deployed to:", testUSDTAddress);
-
-  // Deploy LaterPayV2
+  const testUSDTAddress = process.env.TEST_USDT_ADDRESS || "0xb9f8a75b9FAB0b02F7BCe900eA072CdCD537c232";
+  console.log("Using TestUSDT address:", testUSDTAddress);
+  
+  // Deploy LaterPayV2 only
   console.log("\nDeploying LaterPayV2...");
   const LaterPayV2 = await hre.ethers.getContractFactory("LaterPayV2");
-  const laterPay = await LaterPayV2.deploy(testUSDTAddress, deployer.address);
+  const laterPay = await LaterPayV2.connect(deployer).deploy(testUSDTAddress, deployer.address, {
+    gasLimit: 5000000,
+  });
   await laterPay.waitForDeployment();
   const laterPayAddress = await laterPay.getAddress();
   console.log("LaterPayV2 deployed to:", laterPayAddress);
-
+  
   console.log("\n=== Deployment Summary ===");
   console.log("TestUSDT Address:", testUSDTAddress);
-  console.log("LaterPay Address:", laterPayAddress);
+  console.log("LaterPayV2 Address:", laterPayAddress);
   console.log("Deployer Address:", deployer.address);
   
   // Save addresses to .env file
@@ -65,13 +55,6 @@ async function main() {
     envContent = fs.readFileSync(envPath, "utf8");
   }
   
-  // Update or add addresses
-  if (envContent.includes("TEST_USDT_ADDRESS=")) {
-    envContent = envContent.replace(/TEST_USDT_ADDRESS=.*/g, `TEST_USDT_ADDRESS=${testUSDTAddress}`);
-  } else {
-    envContent += `\nTEST_USDT_ADDRESS=${testUSDTAddress}`;
-  }
-  
   if (envContent.includes("LATER_PAY_ADDRESS=")) {
     envContent = envContent.replace(/LATER_PAY_ADDRESS=.*/g, `LATER_PAY_ADDRESS=${laterPayAddress}`);
   } else {
@@ -80,12 +63,6 @@ async function main() {
   
   fs.writeFileSync(envPath, envContent);
   console.log("\nAddresses saved to .env file!");
-  console.log("\nYou can now use the following commands:");
-  console.log("  npm run balance [address] - Check balance");
-  console.log("  npm run mint <address> <amount> - Mint tokens");
-  console.log("  npm run approve <amount> [days] - Approve payment");
-  console.log("  npm run list [address] - List approvals");
-  console.log("  npm run execute <user_address> <approval_id> - Execute payment");
 }
 
 main()

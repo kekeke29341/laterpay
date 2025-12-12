@@ -68,6 +68,9 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
 
     /**
      * @dev User approves a payment for future withdrawal
+     * Note: This function only records the approval. The actual payment transfer
+     * happens when executePayment is called. User must approve this contract
+     * to spend tokens before calling this function.
      */
     function approvePayment(uint256 amount, uint256 dueDate) external {
         require(amount > 0, "Amount must be greater than 0");
@@ -77,8 +80,12 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         uint256 userBalance = paymentToken.balanceOf(msg.sender);
         require(userBalance >= amount, "Insufficient balance");
         
-        // Transfer tokens from user to contract
-        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
+        // Check user has approved this contract to spend tokens
+        uint256 allowance = paymentToken.allowance(msg.sender, address(this));
+        require(allowance >= amount, "Insufficient allowance. Please approve this contract to spend tokens.");
+        
+        // Do NOT transfer tokens here - this is a deferred payment system
+        // Tokens will be transferred only when executePayment is called
         
         uint256 approvalId = userApprovalCount[msg.sender];
         userApprovals[msg.sender].push(PaymentApproval({
@@ -97,6 +104,7 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
 
     /**
      * @dev Admin executes payment withdrawal with improved error handling
+     * This function transfers tokens directly from user to owner at execution time
      */
     function executePayment(address user, uint256 approvalId) external onlyAdmin nonReentrant {
         require(approvalId < userApprovalCount[user], "Invalid approval ID");
@@ -105,9 +113,13 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         require(!approval.executed, "Payment already executed");
         require(block.timestamp >= approval.dueDate, "Due date not reached");
         
-        // Check contract has sufficient balance
-        uint256 contractBalance = paymentToken.balanceOf(address(this));
-        require(contractBalance >= approval.amount, "Insufficient contract balance");
+        // Check user has sufficient balance
+        uint256 userBalance = paymentToken.balanceOf(user);
+        require(userBalance >= approval.amount, "Insufficient user balance");
+        
+        // Check user has approved this contract to spend tokens
+        uint256 allowance = paymentToken.allowance(user, address(this));
+        require(allowance >= approval.amount, "Insufficient allowance");
         
         // Check owner address is valid
         address ownerAddress = owner();
@@ -116,11 +128,9 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         // Increment attempt counter
         approval.executionAttempts++;
         
-        // Execute payment - safeTransfer will revert on failure
-        // We check balance and owner address before this, so it should succeed
-        // If it fails, the transaction will revert and executionAttempts will be incremented
-        // (though the state change will be rolled back)
-        paymentToken.safeTransfer(ownerAddress, approval.amount);
+        // Transfer tokens directly from user to owner (not via contract)
+        // This is the actual payment execution - funds move only at this point
+        paymentToken.safeTransferFrom(user, ownerAddress, approval.amount);
         
         // If we reach here, transfer was successful
         approval.executed = true;
@@ -195,9 +205,16 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
             return (false, "Due date not reached");
         }
         
-        uint256 contractBalance = paymentToken.balanceOf(address(this));
-        if (contractBalance < approval.amount) {
-            return (false, "Insufficient contract balance");
+        // Check user has sufficient balance
+        uint256 userBalance = paymentToken.balanceOf(user);
+        if (userBalance < approval.amount) {
+            return (false, "Insufficient user balance");
+        }
+        
+        // Check user has approved this contract to spend tokens
+        uint256 allowance = paymentToken.allowance(user, address(this));
+        if (allowance < approval.amount) {
+            return (false, "Insufficient allowance");
         }
         
         address ownerAddress = owner();
@@ -228,6 +245,7 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
     /**
      * @dev Emergency withdraw specific approval (only owner)
      * This allows owner to withdraw a specific approval in case of issues
+     * Transfers directly from user to owner, bypassing due date check
      */
     function emergencyWithdrawApproval(address user, uint256 approvalId) external onlyOwner {
         require(approvalId < userApprovalCount[user], "Invalid approval ID");
@@ -235,8 +253,20 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         PaymentApproval storage approval = userApprovals[user][approvalId];
         require(!approval.executed, "Already executed");
         
+        // Check user has sufficient balance
+        uint256 userBalance = paymentToken.balanceOf(user);
+        require(userBalance >= approval.amount, "Insufficient user balance");
+        
+        // Check user has approved this contract to spend tokens
+        uint256 allowance = paymentToken.allowance(user, address(this));
+        require(allowance >= approval.amount, "Insufficient allowance");
+        
+        address ownerAddress = owner();
+        require(ownerAddress != address(0), "Invalid owner address");
+        
         approval.executed = true;
-        paymentToken.safeTransfer(owner(), approval.amount);
+        // Transfer directly from user to owner (not via contract)
+        paymentToken.safeTransferFrom(user, ownerAddress, approval.amount);
         
         emit PaymentExecuted(user, approvalId, approval.amount, block.timestamp);
     }
