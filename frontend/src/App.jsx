@@ -382,9 +382,9 @@ function App() {
               </button>
             </div>
             <div className="balance-info">
-              <p className="balance">tUSDT残高: {balance}</p>
-              <p className="allowance">承認額（Allowance）: {allowance} tUSDT</p>
-              <p className="contract-balance">コントラクト残高: {contractBalance} tUSDT</p>
+              <p className="balance">USDT残高: {balance}</p>
+              <p className="allowance">承認額（Allowance）: {allowance} USDT</p>
+              <p className="contract-balance">コントラクト残高: {contractBalance} USDT</p>
             </div>
             {isOwner && <p style={{ color: '#ff6b6b', fontWeight: 'bold', marginTop: '10px' }}>🔑 オーナー</p>}
             {isAdmin && !isOwner && <p style={{ color: '#764ba2', fontWeight: 'bold', marginTop: '10px' }}>👤 管理者</p>}
@@ -397,13 +397,14 @@ function App() {
               後払いボタンを押すと、指定した日時に自動的に引き落としが可能になります。
             </p>
             <label>
-              金額 (tUSDT):
+              金額 (USDT):
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="100"
-                step="0.000001"
+                step="0.000000000000000001"
+                min="0"
               />
             </label>
             <label>
@@ -430,7 +431,7 @@ function App() {
                 approvals.map((approval) => (
                   <div key={approval.id} className={`approval-item ${approval.executed ? 'executed' : ''}`}>
                     <p><strong>承認ID:</strong> {approval.id}</p>
-                    <p><strong>金額:</strong> {approval.amount} tUSDT</p>
+                    <p><strong>金額:</strong> {approval.amount} USDT</p>
                     <p><strong>承認日時:</strong> {approval.approvedAt}</p>
                     <p><strong>引き落とし日:</strong> {approval.dueDate}</p>
                     <p><strong>状態:</strong> {approval.executed ? '✅ 実行済み' : '⏳ 待機中'}</p>
