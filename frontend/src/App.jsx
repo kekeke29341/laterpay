@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate, Link } from 'react-router-dom'
 import { ethers } from 'ethers'
 import EthereumProvider from '@walletconnect/ethereum-provider'
-import AdminPage from './AdminPage'
 import './index.css'
 
 // ローカルストレージから設定を読み込む
@@ -344,20 +342,11 @@ function App() {
 
 
 
-  const navigate = useNavigate()
-
   return (
-    <Routes>
-      <Route path="/" element={
-        <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1>Later Pay - 後払いシステム</h1>
-            {account && (isAdmin || isOwner) && (
-              <Link to="/admin" style={{ textDecoration: 'none' }}>
-                <button className="wallet-button">管理者ページ</button>
-              </Link>
-            )}
-          </div>
+    <div className="container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1>Later Pay - 後払いシステム</h1>
+      </div>
 
       {!account ? (
         <div className="card">
@@ -454,30 +443,12 @@ function App() {
         </>
       )}
 
-          {status.message && (
-            <div className={`status ${status.type}`}>
-              {status.message}
-            </div>
-          )}
+      {status.message && (
+        <div className={`status ${status.type}`}>
+          {status.message}
         </div>
-      } />
-      <Route path="/admin" element={
-        <AdminPage
-          provider={provider}
-          signer={signer}
-          account={account}
-          laterPay={laterPay}
-          testUSDT={testUSDT}
-          isAdmin={isAdmin}
-          isOwner={isOwner}
-          onDisconnect={disconnectWallet}
-          walletConnectProvider={walletConnectProvider}
-          walletType={walletType}
-          onConnectMetaMask={connectMetaMask}
-          onConnectWalletConnect={handleWalletConnectConnect}
-        />
-      } />
-    </Routes>
+      )}
+    </div>
   )
 }
 
