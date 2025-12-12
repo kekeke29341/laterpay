@@ -92,9 +92,11 @@ function App() {
             themeVariables: {
               '--w3m-z-index': '9999'
             },
-            enableExplorer: true,
+            enableExplorer: false, // APIエラーを回避するためオフライン動作に
             explorerRecommendedWalletIds: undefined,
             explorerExcludedWalletIds: undefined,
+            enableAccountView: true,
+            enableNetworkView: true,
           },
           metadata: {
             name: 'Later Pay',
@@ -208,10 +210,19 @@ function App() {
 
       setStatus({ type: 'info', message: 'ウォレットを選択してください...' })
       
-      // 接続オプションを指定
-      await walletConnectProvider.connect({
-        optionalChains: [1, 11155111, 56, 97],
-      })
+      // 接続オプションを指定（スマホ対応）
+      try {
+        await walletConnectProvider.connect({
+          optionalChains: [1, 11155111, 56, 97],
+        })
+      } catch (error) {
+        // 接続エラーをキャッチ（ユーザーがキャンセルした場合など）
+        if (error.message !== 'User rejected' && !error.message.includes('rejected')) {
+          console.error('WalletConnect接続エラー:', error)
+          setStatus({ type: 'error', message: `接続エラー: ${error.message}` })
+        }
+        return
+      }
 
       const ethersProvider = new ethers.BrowserProvider(walletConnectProvider)
       const signer = await ethersProvider.getSigner()
