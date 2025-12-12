@@ -93,8 +93,6 @@ function App() {
               '--w3m-z-index': '9999'
             },
             enableExplorer: false, // APIエラーを回避するためオフライン動作に
-            explorerRecommendedWalletIds: undefined,
-            explorerExcludedWalletIds: undefined,
             enableAccountView: true,
             enableNetworkView: true,
           },
