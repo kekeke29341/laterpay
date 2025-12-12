@@ -1,0 +1,345 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  color: white;
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+h2 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin: 5px;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  margin: 10px 0;
+  transition: border-color 0.3s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+label {
+  display: block;
+  margin-top: 15px;
+  color: #555;
+  font-weight: 500;
+}
+
+.status {
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+
+.status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status.info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.status.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.approval-list {
+  margin-top: 20px;
+}
+
+.approval-item {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 10px 0;
+  border-left: 4px solid #667eea;
+}
+
+.approval-item.executed {
+  border-left-color: #28a745;
+  opacity: 0.7;
+}
+
+.address {
+  font-family: monospace;
+  font-size: 0.9em;
+  color: #666;
+  word-break: break-all;
+}
+
+.balance {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #667eea;
+  margin: 10px 0;
+}
+
+.admin-section {
+  border-top: 2px solid #e0e0e0;
+  margin-top: 30px;
+  padding-top: 30px;
+}
+
+.admin-section h2 {
+  color: #764ba2;
+}
+
+/* ウォレット接続ボタン */
+.wallet-button {
+  flex: 1;
+  min-width: 200px;
+  padding: 15px 30px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wallet-button.metamask {
+  background: linear-gradient(135deg, #f6851b 0%, #e2761b 100%);
+}
+
+.wallet-button.walletconnect {
+  background: linear-gradient(135deg, #3b99fc 0%, #2a5cff 100%);
+}
+
+.wallet-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 切断ボタン */
+.disconnect-button {
+  background: #dc3545;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.disconnect-button:hover {
+  background: #c82333;
+}
+
+/* ウォレットタイプ表示 */
+.wallet-type {
+  font-size: 0.85em;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* 残高情報 */
+.balance-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+
+.allowance {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #28a745;
+  margin: 10px 0;
+}
+
+.contract-balance {
+  font-size: 1em;
+  color: #666;
+  margin: 10px 0;
+}
+
+/* 後払い承認ボタン */
+.approve-button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: 600;
+  width: 100%;
+  margin-top: 15px;
+}
+
+.approve-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #218838 0%, #1ea080 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+}
+
+/* 引き落とし実行ボタン */
+.execute-button {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.execute-button:hover {
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+}
+
+/* 承認アイテムの改善 */
+.approval-item {
+  transition: all 0.3s ease;
+}
+
+.approval-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.approval-item.executed {
+  background: #e8f5e9;
+  border-left-color: #28a745;
+}
+
+/* 管理者タブ */
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  background: transparent;
+  color: #666;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+  margin: 0;
+}
+
+.admin-tab:hover:not(:disabled) {
+  background: #f8f9fa;
+  color: #667eea;
+}
+
+.admin-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  font-weight: 600;
+}
+
+.admin-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  .wallet-button {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .admin-tabs {
+    flex-direction: column;
+  }
+
+  .admin-tab {
+    width: 100%;
+    border-radius: 8px;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .admin-tab.active {
+    border-left-color: #667eea;
+    border-bottom-color: transparent;
+  }
+}
+
