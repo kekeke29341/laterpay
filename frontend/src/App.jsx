@@ -84,7 +84,7 @@ function App() {
       try {
         const provider = await EthereumProvider.init({
           projectId: WALLETCONNECT_PROJECT_ID,
-          chains: [1, 11155111], // Ethereum Mainnet, Sepolia
+          chains: [1, 11155111, 56, 97], // Ethereum Mainnet, Sepolia, BSC Mainnet, BSC Testnet
           showQrModal: true,
           metadata: {
             name: 'Later Pay',
