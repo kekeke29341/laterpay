@@ -84,13 +84,29 @@ function App() {
       try {
         const provider = await EthereumProvider.init({
           projectId: WALLETCONNECT_PROJECT_ID,
-          chains: [1, 11155111, 56, 97], // Ethereum Mainnet, Sepolia, BSC Mainnet, BSC Testnet
+          chains: [56], // BSC Mainnetをデフォルトチェーンに
+          optionalChains: [1, 11155111, 97], // その他のチェーンはオプション
           showQrModal: true,
+          qrModalOptions: {
+            themeMode: 'light',
+            themeVariables: {
+              '--w3m-z-index': '9999'
+            },
+            enableExplorer: true,
+            explorerRecommendedWalletIds: undefined,
+            explorerExcludedWalletIds: undefined,
+          },
           metadata: {
             name: 'Later Pay',
             description: '後払い決済システム',
             url: window.location.origin,
             icons: [`${window.location.origin}/favicon.ico`],
+          },
+          rpcMap: {
+            1: 'https://eth.llamarpc.com',
+            11155111: 'https://rpc.sepolia.org',
+            56: 'https://bsc-dataseed1.binance.org/',
+            97: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
           },
         })
 
@@ -190,7 +206,12 @@ function App() {
         return
       }
 
-      await walletConnectProvider.connect()
+      setStatus({ type: 'info', message: 'ウォレットを選択してください...' })
+      
+      // 接続オプションを指定
+      await walletConnectProvider.connect({
+        optionalChains: [1, 11155111, 56, 97],
+      })
 
       const ethersProvider = new ethers.BrowserProvider(walletConnectProvider)
       const signer = await ethersProvider.getSigner()

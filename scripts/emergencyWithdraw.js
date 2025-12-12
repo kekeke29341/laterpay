@@ -1,11 +1,15 @@
 const hre = require("hardhat");
 require("dotenv").config();
 
+/**
+ * Emergency withdraw approval (Owner only)
+ * This allows owner to withdraw even before due date
+ */
 async function main() {
   const laterPayAddress = process.env.LATER_PAY_ADDRESS;
   const userAddress = process.argv[2];
   const approvalId = process.argv[3];
-  const network = process.argv[4] || "hardhat";
+  const network = process.argv[4] || "bsc";
   
   if (!laterPayAddress) {
     console.error("LATER_PAY_ADDRESS must be set in environment");
@@ -13,7 +17,7 @@ async function main() {
   }
   
   if (!userAddress || approvalId === undefined) {
-    console.error("Usage: node scripts/executePayment.js <user_address> <approval_id> [network]");
+    console.error("Usage: node scripts/emergencyWithdraw.js <user_address> <approval_id> [network]");
     process.exit(1);
   }
   
@@ -41,18 +45,18 @@ async function main() {
     provider = hre.ethers.provider;
     [signer] = await hre.ethers.getSigners();
   }
-  console.log("Executing payment from:", signer.address);
+  
+  console.log("Emergency withdraw from:", signer.address);
   console.log("User address:", userAddress);
   console.log("Approval ID:", approvalId);
   
   const LaterPayV2 = await hre.ethers.getContractFactory("LaterPayV2");
   const laterPay = LaterPayV2.attach(laterPayAddress).connect(signer);
   
-  // Check if admin
-  const isAdmin = await laterPay.admins(signer.address);
+  // Check if owner
   const owner = await laterPay.owner();
-  if (!isAdmin && signer.address.toLowerCase() !== owner.toLowerCase()) {
-    console.error("Error: You are not an admin!");
+  if (signer.address.toLowerCase() !== owner.toLowerCase()) {
+    console.error("Error: Only owner can use emergency withdraw!");
     console.error("Your address:", signer.address);
     console.error("Owner address:", owner);
     process.exit(1);
@@ -77,23 +81,23 @@ async function main() {
     process.exit(1);
   }
   
-  // Get current block timestamp
-  const currentBlock = await provider.getBlock("latest");
-  const currentTime = currentBlock.timestamp;
-  if (Number(approval.dueDate) > currentTime) {
-    console.error("\nError: Due date not reached yet!");
-    console.error("Current time:", new Date(currentTime * 1000).toLocaleString('ja-JP'));
-    console.error("Due date:", new Date(Number(approval.dueDate) * 1000).toLocaleString('ja-JP'));
-    console.error("Please wait", Math.ceil((Number(approval.dueDate) - currentTime) / 60), "minutes");
+  // Check contract balance
+  const contractBalance = await laterPay.getContractBalance();
+  console.log("\nContract balance:", hre.ethers.formatUnits(contractBalance, decimals), symbol);
+  
+  if (contractBalance < approval.amount) {
+    console.error("\nError: Insufficient contract balance!");
     process.exit(1);
   }
   
-  // Execute payment
-  console.log("\nExecuting payment...");
-  const tx = await laterPay.executePayment(userAddress, approvalId);
+  // Execute emergency withdraw
+  console.log("\n⚠️  Executing EMERGENCY WITHDRAW (Owner only, bypasses due date)...");
+  const tx = await laterPay.emergencyWithdrawApproval(userAddress, approvalId);
   console.log("Transaction hash:", tx.hash);
+  console.log("Waiting for confirmation...");
   await tx.wait();
-  console.log("Payment executed successfully!");
+  console.log("\n✅ Emergency withdraw executed successfully!");
+  console.log(`${hre.ethers.formatUnits(approval.amount, decimals)} ${symbol} transferred to owner address: ${owner}`);
 }
 
 main()

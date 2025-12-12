@@ -10,11 +10,26 @@ async function main() {
   const network = hre.network.name;
   console.log("Deploying to network:", network);
   
-  const [deployer] = await hre.ethers.getSigners();
+  let deployer;
+  if (network === "bsc" || network === "bscTestnet") {
+    if (!process.env.PRIVATE_KEY) {
+      console.error("\n❌ Error: PRIVATE_KEY not set in environment!");
+      console.error("Please set PRIVATE_KEY in .env file");
+      process.exit(1);
+    }
+    const provider = new hre.ethers.JsonRpcProvider(
+      network === "bsc" 
+        ? (process.env.BSC_RPC_URL || "https://bsc-dataseed1.binance.org/")
+        : (process.env.BSC_TESTNET_RPC_URL || "https://data-seed-prebsc-1-s1.binance.org:8545/")
+    );
+    deployer = new hre.ethers.Wallet(process.env.PRIVATE_KEY, provider);
+  } else {
+    [deployer] = await hre.ethers.getSigners();
+  }
   
   console.log("Deploying contracts with account:", deployer.address);
   const balance = await hre.ethers.provider.getBalance(deployer.address);
-  console.log("Account balance:", hre.ethers.formatEther(balance), "ETH/BNB");
+  console.log("Account balance:", hre.ethers.formatEther(balance), "BNB");
   
   // Get USDT address from environment or use default for BSC
   const usdtAddress = process.env.USDT_ADDRESS || process.env.PAYMENT_TOKEN_ADDRESS;
@@ -31,12 +46,14 @@ async function main() {
   
   // Verify USDT contract exists
   try {
-    const usdtContract = await hre.ethers.getContractAt("IERC20", usdtAddress);
+    const usdtAbi = ["function symbol() view returns (string)", "function decimals() view returns (uint8)"];
+    const usdtContract = new hre.ethers.Contract(usdtAddress, usdtAbi, deployer);
     const symbol = await usdtContract.symbol();
     const decimals = await usdtContract.decimals();
     console.log(`✓ USDT contract verified: ${symbol} (${decimals} decimals)`);
   } catch (error) {
     console.error("\n❌ Error: Could not verify USDT contract at address:", usdtAddress);
+    console.error("Error:", error.message);
     console.error("Please check the address is correct for the network:", network);
     process.exit(1);
   }
@@ -44,7 +61,7 @@ async function main() {
   // Deploy LaterPayV2 only (no TestUSDT deployment)
   console.log("\nDeploying LaterPayV2...");
   const LaterPayV2 = await hre.ethers.getContractFactory("LaterPayV2");
-  const laterPay = await LaterPayV2.deploy(usdtAddress, deployer.address);
+  const laterPay = await LaterPayV2.connect(deployer).deploy(usdtAddress, deployer.address);
   await laterPay.waitForDeployment();
   const laterPayAddress = await laterPay.getAddress();
   console.log("LaterPayV2 deployed to:", laterPayAddress);

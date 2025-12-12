@@ -15,11 +15,17 @@ async function main() {
   
   if (network === "sepolia") {
     provider = new hre.ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+  } else if (network === "bsc" || network === "bscTestnet") {
+    provider = new hre.ethers.JsonRpcProvider(
+      network === "bsc" 
+        ? (process.env.BSC_RPC_URL || "https://bsc-dataseed1.binance.org/")
+        : (process.env.BSC_TESTNET_RPC_URL || "https://data-seed-prebsc-1-s1.binance.org:8545/")
+    );
   } else {
     provider = hre.ethers.provider;
   }
   
-  const signer = network === "sepolia" && process.env.PRIVATE_KEY
+  const signer = (network === "sepolia" || network === "bsc" || network === "bscTestnet") && process.env.PRIVATE_KEY
     ? new hre.ethers.Wallet(process.env.PRIVATE_KEY, provider)
     : (await hre.ethers.getSigners())[0];
   
@@ -27,13 +33,14 @@ async function main() {
   
   console.log("Listing approvals for:", targetAddress);
   
-  const LaterPay = await hre.ethers.getContractFactory("LaterPay");
-  const laterPay = LaterPay.attach(laterPayAddress).connect(provider);
+  const LaterPayV2 = await hre.ethers.getContractFactory("LaterPayV2");
+  const laterPay = LaterPayV2.attach(laterPayAddress).connect(provider);
   
-  const testUSDTAddress = await laterPay.paymentToken();
-  const TestUSDT = await hre.ethers.getContractFactory("TestUSDT");
-  const testUSDT = TestUSDT.attach(testUSDTAddress).connect(provider);
-  const decimals = await testUSDT.decimals();
+  const usdtAddress = await laterPay.paymentToken();
+  const usdtAbi = ["function decimals() view returns (uint8)", "function symbol() view returns (string)"];
+  const usdtContract = new hre.ethers.Contract(usdtAddress, usdtAbi, provider);
+  const decimals = await usdtContract.decimals();
+  const symbol = await usdtContract.symbol();
   
   const count = await laterPay.userApprovalCount(targetAddress);
   console.log("\nTotal approvals:", count.toString());
@@ -52,7 +59,7 @@ async function main() {
     const canExecute = !approval.executed && Number(approval.dueDate) <= currentTime;
     
     console.log(`\nApproval ID: ${i}`);
-    console.log(`  Amount: ${hre.ethers.formatUnits(approval.amount, decimals)} tUSDT`);
+    console.log(`  Amount: ${hre.ethers.formatUnits(approval.amount, decimals)} ${symbol}`);
     console.log(`  Approved at: ${new Date(Number(approval.approvedAt) * 1000).toLocaleString('ja-JP')}`);
     console.log(`  Due date: ${new Date(Number(approval.dueDate) * 1000).toLocaleString('ja-JP')}`);
     console.log(`  Status: ${approval.executed ? '✅ Executed' : canExecute ? '✅ Ready to execute' : '⏳ Pending'}`);
