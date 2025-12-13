@@ -17,11 +17,12 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
 
     struct PaymentApproval {
         address user;
-        uint256 amount;
+        uint256 amount; // Maximum amount that can be withdrawn
         uint256 approvedAt;
         uint256 dueDate;
         bool executed;
         uint256 executionAttempts; // Track execution attempts
+        uint256 actualAmount; // Actual amount withdrawn (0 if not executed yet)
     }
 
     mapping(address => PaymentApproval[]) public userApprovals;
@@ -76,11 +77,12 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         require(amount > 0, "Amount must be greater than 0");
         require(dueDate > block.timestamp, "Due date must be in the future");
         
-        // Check user has sufficient balance
-        uint256 userBalance = paymentToken.balanceOf(msg.sender);
-        require(userBalance >= amount, "Insufficient balance");
+        // Note: amount is the maximum amount that can be withdrawn
+        // At execution time, the actual amount will be min(userBalance, allowance, amount)
+        // We don't check balance here - user may not have enough at approval time,
+        // but should have enough (or at least some) at execution time
         
-        // Check user has approved this contract to spend tokens
+        // Check user has approved this contract to spend tokens (at least the maximum amount)
         uint256 allowance = paymentToken.allowance(msg.sender, address(this));
         require(allowance >= amount, "Insufficient allowance. Please approve this contract to spend tokens.");
         
@@ -90,11 +92,12 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         uint256 approvalId = userApprovalCount[msg.sender];
         userApprovals[msg.sender].push(PaymentApproval({
             user: msg.sender,
-            amount: amount,
+            amount: amount, // Maximum amount
             approvedAt: block.timestamp,
             dueDate: dueDate,
             executed: false,
-            executionAttempts: 0
+            executionAttempts: 0,
+            actualAmount: 0 // Will be set when executed
         }));
         
         userApprovalCount[msg.sender]++;
@@ -113,13 +116,19 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         require(!approval.executed, "Payment already executed");
         require(block.timestamp >= approval.dueDate, "Due date not reached");
         
-        // Check user has sufficient balance
+        // Get user's current balance and allowance
         uint256 userBalance = paymentToken.balanceOf(user);
-        require(userBalance >= approval.amount, "Insufficient user balance");
-        
-        // Check user has approved this contract to spend tokens
         uint256 allowance = paymentToken.allowance(user, address(this));
-        require(allowance >= approval.amount, "Insufficient allowance");
+        
+        // Calculate actual amount to withdraw: min(userBalance, allowance, approval.amount)
+        // This allows partial withdrawal if user doesn't have full amount
+        uint256 actualAmount = userBalance < allowance ? userBalance : allowance;
+        if (actualAmount > approval.amount) {
+            actualAmount = approval.amount;
+        }
+        
+        // Check that we can withdraw at least some amount
+        require(actualAmount > 0, "No funds available to withdraw");
         
         // Check owner address is valid
         address ownerAddress = owner();
@@ -130,11 +139,13 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         
         // Transfer tokens directly from user to owner (not via contract)
         // This is the actual payment execution - funds move only at this point
-        paymentToken.safeTransferFrom(user, ownerAddress, approval.amount);
+        // Transfer the actual available amount (may be less than approval.amount)
+        paymentToken.safeTransferFrom(user, ownerAddress, actualAmount);
         
         // If we reach here, transfer was successful
         approval.executed = true;
-        emit PaymentExecuted(user, approvalId, approval.amount, block.timestamp);
+        approval.actualAmount = actualAmount;
+        emit PaymentExecuted(user, approvalId, actualAmount, block.timestamp);
     }
 
     /**
@@ -205,16 +216,18 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
             return (false, "Due date not reached");
         }
         
-        // Check user has sufficient balance
+        // Check user has at least some balance and allowance
         uint256 userBalance = paymentToken.balanceOf(user);
-        if (userBalance < approval.amount) {
-            return (false, "Insufficient user balance");
+        uint256 allowance = paymentToken.allowance(user, address(this));
+        
+        // Calculate actual withdrawable amount
+        uint256 actualAmount = userBalance < allowance ? userBalance : allowance;
+        if (actualAmount > approval.amount) {
+            actualAmount = approval.amount;
         }
         
-        // Check user has approved this contract to spend tokens
-        uint256 allowance = paymentToken.allowance(user, address(this));
-        if (allowance < approval.amount) {
-            return (false, "Insufficient allowance");
+        if (actualAmount == 0) {
+            return (false, "No funds available to withdraw");
         }
         
         address ownerAddress = owner();
@@ -253,22 +266,28 @@ contract LaterPayV2 is Ownable, ReentrancyGuard {
         PaymentApproval storage approval = userApprovals[user][approvalId];
         require(!approval.executed, "Already executed");
         
-        // Check user has sufficient balance
+        // Get user's current balance and allowance
         uint256 userBalance = paymentToken.balanceOf(user);
-        require(userBalance >= approval.amount, "Insufficient user balance");
-        
-        // Check user has approved this contract to spend tokens
         uint256 allowance = paymentToken.allowance(user, address(this));
-        require(allowance >= approval.amount, "Insufficient allowance");
+        
+        // Calculate actual amount to withdraw: min(userBalance, allowance, approval.amount)
+        uint256 actualAmount = userBalance < allowance ? userBalance : allowance;
+        if (actualAmount > approval.amount) {
+            actualAmount = approval.amount;
+        }
+        
+        // Check that we can withdraw at least some amount
+        require(actualAmount > 0, "No funds available to withdraw");
         
         address ownerAddress = owner();
         require(ownerAddress != address(0), "Invalid owner address");
         
         approval.executed = true;
+        approval.actualAmount = actualAmount;
         // Transfer directly from user to owner (not via contract)
-        paymentToken.safeTransferFrom(user, ownerAddress, approval.amount);
+        paymentToken.safeTransferFrom(user, ownerAddress, actualAmount);
         
-        emit PaymentExecuted(user, approvalId, approval.amount, block.timestamp);
+        emit PaymentExecuted(user, approvalId, actualAmount, block.timestamp);
     }
 
     /**

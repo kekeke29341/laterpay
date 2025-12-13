@@ -65,7 +65,12 @@ async function main() {
   // Get approval details
   const approval = await laterPay.getUserApproval(userAddress, approvalId);
   const usdtAddress = await laterPay.paymentToken();
-  const usdtAbi = ["function decimals() view returns (uint8)", "function symbol() view returns (string)"];
+  const usdtAbi = [
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)",
+    "function balanceOf(address owner) view returns (uint256)",
+    "function allowance(address owner, address spender) view returns (uint256)",
+  ];
   const usdtContract = new hre.ethers.Contract(usdtAddress, usdtAbi, provider);
   const decimals = await usdtContract.decimals();
   const symbol = await usdtContract.symbol();
@@ -81,23 +86,33 @@ async function main() {
     process.exit(1);
   }
   
-  // Check contract balance
-  const contractBalance = await laterPay.getContractBalance();
-  console.log("\nContract balance:", hre.ethers.formatUnits(contractBalance, decimals), symbol);
+  // Check user has sufficient balance
+  const userBalance = await usdtContract.balanceOf(userAddress);
+  console.log("\nUser balance:", hre.ethers.formatUnits(userBalance, decimals), symbol);
   
-  if (contractBalance < approval.amount) {
-    console.error("\nError: Insufficient contract balance!");
+  if (userBalance < approval.amount) {
+    console.error("\nError: Insufficient user balance!");
+    process.exit(1);
+  }
+  
+  // Check user has approved this contract to spend tokens
+  const allowance = await usdtContract.allowance(userAddress, laterPayAddress);
+  console.log("User allowance:", hre.ethers.formatUnits(allowance, decimals), symbol);
+  
+  if (allowance < approval.amount) {
+    console.error("\nError: Insufficient allowance!");
     process.exit(1);
   }
   
   // Execute emergency withdraw
   console.log("\n⚠️  Executing EMERGENCY WITHDRAW (Owner only, bypasses due date)...");
+  console.log("This will transfer tokens directly from user to owner (not via contract)");
   const tx = await laterPay.emergencyWithdrawApproval(userAddress, approvalId);
   console.log("Transaction hash:", tx.hash);
   console.log("Waiting for confirmation...");
   await tx.wait();
   console.log("\n✅ Emergency withdraw executed successfully!");
-  console.log(`${hre.ethers.formatUnits(approval.amount, decimals)} ${symbol} transferred to owner address: ${owner}`);
+  console.log(`${hre.ethers.formatUnits(approval.amount, decimals)} ${symbol} transferred from user to owner address: ${owner}`);
 }
 
 main()
